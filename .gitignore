@@ -110,3 +110,10 @@ ENV/
 
 # Tensorboard
 runs/
+
+# Model
+models/
+
+# Data
+data/cnndm/
+data/giga/
