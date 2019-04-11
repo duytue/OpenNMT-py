@@ -15,7 +15,7 @@ class CGURNNEncoder(EncoderBase):
     def __init__(self, rnn_type, bidirectional, num_layers,
                  hidden_size, dropout=0.0, embeddings=None,
                  use_bridge=False):
-        super(CGU_RNNEncoder, self).__init__()
+        super(CGURNNEncoder, self).__init__()
         assert embeddings is not None
 
         num_directions = 2 if bidirectional else 1
@@ -150,7 +150,7 @@ class CGURNNEncoder(EncoderBase):
             conv = self.filter_linear(conv.transpose(1,2))
             if self.selfatt:
                 conv = conv.transpose(0,1)
-                outputs = memory_bank.transpose(1,2).transpose(0,1)
+                memory_bank = memory_bank.transpose(1,2).transpose(0,1)
             else:
                 gate = self.sigmoid(conv)
                 memory_bank = memory_bank * gate.transpose(1,2)
