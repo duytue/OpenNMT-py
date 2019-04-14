@@ -55,7 +55,7 @@ class CGURNNEncoder(EncoderBase):
         #         hidden_size, coverage=coverage_attn,
         #         attn_type=attn_type, attn_func=attn_func
         #     )
-        self.attention = models.luong_gate_attention(hidden_size, embeddings.embedding_size)
+        self.attention = luong_gate_attention(hidden_size, embeddings.embedding_size)
 
         # if config.selfatt:
         #     if config.attention == 'None':
