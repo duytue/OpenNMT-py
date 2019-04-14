@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from onmt.models.stacked_rnn import StackedLSTM, StackedGRU
-from onmt.modules import context_gate_factory, GlobalAttention
+from onmt.modules import context_gate_factory, GlobalAttention, luong_gate_attention
 from onmt.utils.rnn_factory import rnn_factory
 
 from onmt.utils.misc import aeq
@@ -122,6 +122,12 @@ class CGURNNDecoderBase(DecoderBase):
                 hidden_size, coverage=coverage_attn,
                 attn_type=attn_type, attn_func=attn_func
             )
+            # == CGU ==============================================
+            self.attention = luong_gate_attention(hidden_size, embeddings.embedding_size, prob=dropout)
+            # CGU layer for compute_score
+            tgt_vocab_size = 50000 + 4 # 50000 for words + 4 for special tokens (EOS, UNK)
+            self.linear = nn.Linear(hidden_size, tgt_vocab_size)
+            # == CGU ==============================================
 
         if copy_attn and not reuse_copy_attn:
             if copy_attn_type == "none" or copy_attn_type is None:
@@ -296,10 +302,12 @@ class CGUInputFeedRNNDecoder(CGURNNDecoderBase):
             decoder_input = torch.cat([emb_t.squeeze(0), input_feed], 1)
             rnn_output, dec_state = self.rnn(decoder_input, dec_state)
             if self.attentional:
-                decoder_output, p_attn = self.attn(
-                    rnn_output,
-                    memory_bank.transpose(0, 1),
-                    memory_lengths=memory_lengths)
+                # decoder_output, p_attn = self.attn(
+                #     rnn_output,
+                #     memory_bank.transpose(0, 1),
+                #     memory_lengths=memory_lengths)
+                decoder_output, p_attn = self.attention(rnn_output)
+                self.linear(decoder_output)
                 attns["std"].append(p_attn)
             else:
                 decoder_output = rnn_output

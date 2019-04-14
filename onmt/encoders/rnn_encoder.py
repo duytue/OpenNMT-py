@@ -8,7 +8,7 @@ from torch.nn.utils.rnn import pad_packed_sequence as unpack
 
 from onmt.encoders.encoder import EncoderBase
 from onmt.utils.rnn_factory import rnn_factory
-from onmt.modules import context_gate_factory, GlobalAttention
+from onmt.modules import context_gate_factory, GlobalAttention, luong_gate_attention
 
 class CGURNNEncoder(EncoderBase):
 
@@ -43,18 +43,19 @@ class CGURNNEncoder(EncoderBase):
 
         # ================================================
         # Coverage penalty is proved to be as equally good as coverage attention,
-        # So we don't use it here
-        coverage_attn=False
-        # The attention type to use: 
-        # "dotprod or general (Luong) or MLP (Bahdanau)"
-        attn_type = "general"
-        # ["softmax", "sparsemax"]
-        attn_func = "softmax"
+        # # So we don't use it here
+        # coverage_attn=False
+        # # The attention type to use: 
+        # # "dotprod or general (Luong) or MLP (Bahdanau)"
+        # attn_type = "general"
+        # # ["softmax", "sparsemax"]
+        # attn_func = "softmax"
 
-        self.attn = GlobalAttention(
-                hidden_size, coverage=coverage_attn,
-                attn_type=attn_type, attn_func=attn_func
-            )
+        # self.attn = GlobalAttention(
+        #         hidden_size, coverage=coverage_attn,
+        #         attn_type=attn_type, attn_func=attn_func
+        #     )
+        self.attention = models.luong_gate_attention(hidden_size, embeddings.embedding_size)
 
         # if config.selfatt:
         #     if config.attention == 'None':
@@ -166,11 +167,12 @@ class CGURNNEncoder(EncoderBase):
         #         memory_lengths=lengths
         # )
 
-        # if self.selfatt:
-        #     self.attention.init_context(context=conv)
-        #     out_attn, weights = self.attention(conv, selfatt=True)
-        #     gate = self.sigmoid(out_attn)
-        #     memory_bank = memory_bank * gate
+        if self.selfatt:
+            self.attention.init_context(context=conv)
+            # [memory_bank, weights]
+            out_attn, encoder_final = self.attention(conv, selfatt=True)
+            gate = self.sigmoid(out_attn)
+            memory_bank = memory_bank * gate
 
         # if self.config.cell == 'gru':
         #     state = state[:self.config.dec_num_layers]
@@ -180,8 +182,8 @@ class CGURNNEncoder(EncoderBase):
         # ================================================
         # Bridge
 
-        if self.use_bridge:
-            encoder_final = self._bridge(encoder_final)
+        # if self.use_bridge:
+        #     encoder_final = self._bridge(encoder_final)
 
         return encoder_final, memory_bank, lengths
 
